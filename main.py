@@ -1,11 +1,22 @@
-
 import os
 from azure.ai.inference import ChatCompletionsClient
 from azure.ai.inference.models import SystemMessage, UserMessage
 from azure.core.credentials import AzureKeyCredential
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 class LinkedInPostGenerator:
-    def __init__(self, endpoint, token, model="xai/grok-3"):
+    def __init__(self):
+        # Get configuration from environment variables
+        endpoint = os.getenv("GITHUB_AI_ENDPOINT")
+        token = os.getenv("GITHUB_AI_TOKEN")
+        model = os.getenv("GITHUB_AI_MODEL", "xai/grok-3")
+        
+        if not endpoint or not token:
+            raise ValueError("Missing required environment variables: GITHUB_AI_ENDPOINT and GITHUB_AI_TOKEN")
+        
         self.client = ChatCompletionsClient(
             endpoint=endpoint,
             credential=AzureKeyCredential(token),
@@ -45,21 +56,23 @@ class LinkedInPostGenerator:
 
 # Example usage
 if __name__ == "__main__":
-    # Configuration - in a real application, these would come from environment variables
-    endpoint = "https://models.github.ai/inference"
-    token = "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"  # In production, use environment variables
-    model = "xai/grok-3"
-    
-    # Initialize the generator
-    generator = LinkedInPostGenerator(endpoint, token, model)
-    
-    # Get user input
-    topic = input("Enter the topic for your LinkedIn post: ")
-    language = input("Enter the language for your post (e.g., English, Bengali, Spanish): ")
-    
-    # Generate the post
-    post = generator.generate_post(topic, language)
-    
-    print("\nGenerated LinkedIn Post:")
-    print("=" * 50)
-    print(post)
+    try:
+        # Initialize the generator
+        generator = LinkedInPostGenerator()
+        
+        # Get user input
+        topic = input("Enter the topic for your LinkedIn post: ")
+        language = input("Enter the language for your post (e.g., English, Bengali, Spanish): ")
+        
+        # Generate the post
+        post = generator.generate_post(topic, language)
+        
+        print("\nGenerated LinkedIn Post:")
+        print("=" * 50)
+        print(post)
+        
+    except ValueError as e:
+        print(f"Configuration error: {e}")
+        print("Please make sure you've set up the .env file with your API credentials")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
