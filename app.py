@@ -1,6 +1,11 @@
-#  (Streamlit web interface)
+# (Secure Streamlit web interface)
 import streamlit as st
+import os
 from main import LinkedInPostGenerator
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 def main():
     st.title("LinkedIn Post Generator")
@@ -11,21 +16,40 @@ def main():
     language = st.selectbox("Select language:", 
                            ["English", "Spanish", "French", "German", "Bengali", "Hindi", "Arabic"])
     
-    # API configuration (in production, these would be environment variables)
-    endpoint = st.sidebar.text_input("API Endpoint:", 
-                                    value="https://models.github.ai/inference")
-    token = st.sidebar.text_input("API Token:", 
-                                 value="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", 
-                                 type="password")
-    model = st.sidebar.text_input("Model:", value="xai/grok-3")
+    # Get API configuration from environment variables
+    endpoint = os.getenv("GITHUB_AI_ENDPOINT")
+    token = os.getenv("GITHUB_AI_TOKEN")
+    model = os.getenv("GITHUB_AI_MODEL", "xai/grok-3")
+    
+    # Allow manual override in sidebar (for testing, not recommended for production)
+    with st.sidebar:
+        st.header("API Configuration")
+        st.info("Configure these in your .env file for security")
+        endpoint_override = st.text_input("API Endpoint:", value=endpoint or "")
+        token_override = st.text_input("API Token:", value="", type="password")
+        model_override = st.text_input("Model:", value=model or "xai/grok-3")
+    
+    # Use override values if provided, otherwise use environment variables
+    use_endpoint = endpoint_override if endpoint_override else endpoint
+    use_token = token_override if token_override else token
+    use_model = model_override if model_override else model
     
     if st.button("Generate Post"):
         if not topic:
             st.error("Please enter a topic")
             return
+        
+        if not use_endpoint or not use_token:
+            st.error("API configuration missing. Please set up your .env file or enter credentials in the sidebar.")
+            return
             
         try:
-            generator = LinkedInPostGenerator(endpoint, token, model)
+            # Set environment variables temporarily for this instance
+            os.environ["GITHUB_AI_ENDPOINT"] = use_endpoint
+            os.environ["GITHUB_AI_TOKEN"] = use_token
+            os.environ["GITHUB_AI_MODEL"] = use_model
+            
+            generator = LinkedInPostGenerator()
             with st.spinner("Generating your post..."):
                 post = generator.generate_post(topic, language)
             
